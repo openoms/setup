@@ -1,5 +1,5 @@
 # USAGE:
-#   $ wget https://github.com/blckbx/setup/main/setup.sh
+#   $ wget https://github.com/blckbx/setup/blob/main/setup.sh
 #   $ chmod +x setup.sh
 #   $ sudo ./setup.sh
 
