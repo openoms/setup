@@ -14,12 +14,12 @@ then
     setup="mynode"
     echo "> Setup: myNode"
     echo "> LNDDir: $lndConf"
-elif [ "$host" = "umbrel" ] || [ -f /home/umbrel/umbrel/lnd/lnd.conf ]
-then
-    lndConf="/home/umbrel/umbrel/lnd/lnd.conf"
-    setup="umbrel"
-    echo "> Setup: Umbrel"
-    echo "> LNDDir: $lndConf"
+#elif [ "$host" = "umbrel" ] || [ -f /home/umbrel/umbrel/lnd/lnd.conf ]
+#then
+#    lndConf="/home/umbrel/umbrel/lnd/lnd.conf"
+#    setup="umbrel"
+#    echo "> Setup: Umbrel"
+#    echo "> LNDDir: $lndConf"
 elif [ "$host" = "raspiblitz" ] || [ -f /mnt/hdd/lnd/lnd.conf ]
 then
     lndConf="/mnt/hdd/lnd/lnd.conf"
@@ -94,60 +94,70 @@ fi
 
 sleep 2
 
-# get internal IP range
-hostname=$(hostname -I | awk '{print $1}' | cut -d"." -f1-3)
-
 # keep lnd default p2p port
 lndInternalPort="9735"
 
-# static VPN settings for testing purpose; this needs to be set manually or fetched from VPN backend!
-## tests: add credentials here
-myPrivKey=""
-vpnPubKey=""
-vpnInternalIP=""
-wgPort=""
-vpnExternalIP=""
-vpnExternalPort=""
-
-echo "[Interface]
-Address = ${vpnInternalIP}/24
-PrivateKey = ${myPrivKey}
-PostUp = ping -c1 10.0.0.1
-FwMark = 0xdeadbeef
-Table = off
-#51833 is the port of the vpn server
-PostUp = ip rule add not from all fwmark 0xdeadbeef table ${wgPort};ip rule add from all table main suppress_prefixlength 0
-PostUp = ip route add default dev %i table ${wgPort};
-#nftables rules
-PostUp = nft add table inet %i
-PostUp = nft add chain inet %i raw '{type filter hook prerouting priority raw; policy accept;}'; nft add rule inet %i raw iifname != %i ip daddr 10.0.0.1 fib saddr type != local counter drop
-PostUp = nft add chain inet %i prerouting '{type filter hook prerouting priority mangle; policy accept;}'; nft add rule inet %i prerouting meta mark set ct mark
-PostUp = nft add chain inet %i mangle '{type route hook output priority mangle; policy accept;}'; nft add rule inet %i mangle meta cgroup 1118498 meta mark set 0xdeadbeef
-PostUp = nft add chain inet %i nat'{type nat hook postrouting priority srcnat; policy accept;}'; nft add rule inet %i nat oif %i ct mark 0xdeadbeef drop;nft add rule inet %i nat oif != \"lo\" ct mark 0xdeadbeef masquerade
-PostUp = nft add chain inet %i postroutingmangle'{type filter hook postrouting priority mangle; policy accept;}'; nft add rule inet %i postroutingmangle meta mark 0xdeadbeef ct mark set meta mark
-#Kill switch
-PostUp = nft add chain inet %i output '{type filter hook output priority 1; policy accept;}';nft insert rule inet %i output  oifname != %i ip daddr != ${hostname}.0/24 mark != \$(wg show %i fwmark) fib daddr type != local counter reject
-PostUp = nft insert rule inet %i output tcp sport 22 counter accept
-#Delete create Table
-PostDown = nft delete table inet %i
-#Delete Route
-PostDown= ip rule del from all table  main suppress_prefixlength 0; ip rule del not from all fwmark 0xdeadbeef table  ${wgPort}
-[Peer]
-#VPN data
-PublicKey = ${vpnPubKey}
-Endpoint =  ${vpnExternalIP}:${wgPort}
-AllowedIPs = 0.0.0.0/0
-PersistentKeepalive = 25" > /etc/wireguard/lndHybridMode.conf
-
-
+# TODO: check for downloaded lndHybridMode.conf, exit if not available
+echo "Checking for wireguard config file...";echo
 if [ -f /etc/wireguard/lndHybridMode.conf ];then
-   echo "> /etc/wireguard/lndHybridMode.conf VPN config written";echo
+   echo "> /etc/wireguard/lndHybridMode.conf VPN config file found";echo
 else
-   echo "> Writing VPN config file failed";echo
+   echo "> /etc/wireguard/lndHybridMode.conf VPN config file not found";echo
    exit 1
 fi
 
-sleep 2
+
+# get internal IP range
+#hostname=$(hostname -I | awk '{print $1}' | cut -d"." -f1-3)
+
+# static VPN settings for testing purpose; this needs to be set manually or fetched from VPN backend!
+## tests: add credentials here
+#myPrivKey=""
+#vpnPubKey=""
+#vpnInternalIP=""
+#wgPort=""
+#vpnExternalIP=""
+#vpnExternalPort=""
+
+#echo "[Interface]
+#Address = ${vpnInternalIP}/24
+#PrivateKey = ${myPrivKey}
+#PostUp = ping -c1 10.0.0.1
+#FwMark = 0xdeadbeef
+#Table = off
+##51833 is the port of the vpn server
+#PostUp = ip rule add not from all fwmark 0xdeadbeef table ${wgPort};ip rule add from all table main suppress_prefixlength 0
+#PostUp = ip route add default dev %i table ${wgPort};
+##nftables rules
+#PostUp = nft add table inet %i
+#PostUp = nft add chain inet %i raw '{type filter hook prerouting priority raw; policy accept;}'; nft add rule inet %i raw iifname != %i ip daddr 10.0.0.1 fib saddr type != local counter drop
+#PostUp = nft add chain inet %i prerouting '{type filter hook prerouting priority mangle; policy accept;}'; nft add rule inet %i prerouting meta mark set ct mark
+#PostUp = nft add chain inet %i mangle '{type route hook output priority mangle; policy accept;}'; nft add rule inet %i mangle meta cgroup 1118498 meta mark set 0xdeadbeef
+#PostUp = nft add chain inet %i nat'{type nat hook postrouting priority srcnat; policy accept;}'; nft add rule inet %i nat oif %i ct mark 0xdeadbeef drop;nft add rule inet %i nat oif != \"lo\" ct mark 0xdeadbeef masquerade
+#PostUp = nft add chain inet %i postroutingmangle'{type filter hook postrouting priority mangle; policy accept;}'; nft add rule inet %i postroutingmangle meta mark 0xdeadbeef ct mark set meta mark
+##Kill switch
+#PostUp = nft add chain inet %i output '{type filter hook output priority 1; policy accept;}';nft insert rule inet %i output  oifname != %i ip daddr != ${hostname}.0/24 mark != \$(wg show %i fwmark) fib daddr type != local counter reject
+#PostUp = nft insert rule inet %i output tcp sport 22 counter accept
+##Delete create Table
+#PostDown = nft delete table inet %i
+##Delete Route
+#PostDown= ip rule del from all table  main suppress_prefixlength 0; ip rule del not from all fwmark 0xdeadbeef table  ${wgPort}
+#[Peer]
+##VPN data
+#PublicKey = ${vpnPubKey}
+#Endpoint =  ${vpnExternalIP}:${wgPort}
+#AllowedIPs = 0.0.0.0/0
+#PersistentKeepalive = 25" > /etc/wireguard/lndHybridMode.conf
+
+
+#if [ -f /etc/wireguard/lndHybridMode.conf ];then
+#   echo "> /etc/wireguard/lndHybridMode.conf VPN config written";echo
+#else
+#   echo "> Writing VPN config file failed";echo
+#   exit 1
+#fi
+
+#sleep 2
 
 # setup split-tunneling
 echo "Setting up split-tunneling..."
