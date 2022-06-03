@@ -245,28 +245,48 @@ if [ "${lineNumber}" != "" ]; then
        echo "> listen parameter is already set"
     fi
 
-    checkexternalip=$(grep -c "externalip=${vpnExternalIP}:${vpnExternalPort}" $lndConf)
+    #checkexternalip=$(grep -c "externalip=${vpnExternalIP}:${vpnExternalPort}" $lndConf)
+    checkexternalip=$(grep -c "externalip=" $lndConf)
     if [ $checkexternalip -eq 0 ]; then
+       # "externalip=" not found, insert
        sed -i "${lineNumber}iexternalip=${vpnExternalIP}:${vpnExternalPort}" $lndConf
        echo "> externalip parameter set"
     else
-       echo "> externalip parameter is already set"
+       # "externalip=" found, remove and insert
+       # get linenumbers
+       lines=$(grep -n "externalip=" $lndConf | cut -d ":" -f1 | xargs | sed 's/ /;/g')
+       removeString="'"$lines"d'"
+       sed $removeString $lndConf
+       echo "> externalip entries removed"
+       # set new externalip entry
+       sed -i "${lineNumber}iexternalip=${vpnExternalIP}:${vpnExternalPort}" $lndConf
+       echo "> externalip parameter(s) set"
     fi
 fi
 
+# remove unnecessary entries: externalhosts=
+# check if "externalhosts" is set
+checkexternalhosts=$(grep -c "externalhosts=" $lndConf)
+if [ $checkexternalhosts -gt 0 ]; then
+   linesHosts=$(grep -n "externalhosts=" $lndConf | cut -d ":" -f1 | xargs | sed 's/ /;/g')
+   removeStrings="'"$linesHosts"d'"
+   sed $removeStrings $lndConf
+   echo "> externalhosts parameter(s) removed"
+fi
 
-checkstreamisolation=$(sudo grep -c "streamisolation" $lndConf)
+
+checkstreamisolation=$(grep -c "streamisolation" $lndConf)
 if [ $checkstreamisolation -eq 1 ];then
-    sudo sed -i 's/tor.streamisolation=true/tor.streamisolation=false/g' $lndConf
+    sed -i 's/tor.streamisolation=true/tor.streamisolation=false/g' $lndConf
     echo "> tor.streamisolation switched to false"
 else
     echo "tor.streamisolation=false" | sudo tee -a $lndConf
     echo "> tor.streamisolation set"
 fi
 
-checkskipproxy=$(sudo grep -c "skip-proxy-for-clearnet-targets" $lndConf)
+checkskipproxy=$(grep -c "skip-proxy-for-clearnet-targets" $lndConf)
 if [ $checkskipproxy -eq 1 ];then
-    sudo sed -i 's/tor.skip-proxy-for-clearnet-targets=false/tor.skip-proxy-for-clearnet-targets=true/g' $lndConf
+    sed -i 's/tor.skip-proxy-for-clearnet-targets=false/tor.skip-proxy-for-clearnet-targets=true/g' $lndConf
     echo "> tor.skip-proxy-for-clearnet-targets switched to true"
 else
     echo "tor.skip-proxy-for-clearnet-targets=true" | sudo tee -a $lndConf
@@ -278,11 +298,11 @@ sleep 2
 
 ## UFW firewall configuration
 echo "Checking for firewalls and adjusting settings if applicable...";
-checkufw=$(sudo ufw version | grep -c Canonical)
+checkufw=$(ufw version | grep -c Canonical)
 if [ $checkufw -eq 1 ];then
-   sudo ufw disable
-   sudo ufw allow $lndInternalPort
-   sudo ufw --force enable
+   ufw disable
+   ufw allow $lndInternalPort
+   ufw --force enable
    echo "> ufw detected. LND port rule added";echo
 else
    echo "> ufw not detected";echo
@@ -305,7 +325,7 @@ do
       exit 1
    else
      echo;echo "Alright, let's go 🚀";echo
-     sudo systemctl enable wg-quick@lndHybridMode > /dev/null
+     systemctl enable wg-quick@lndHybridMode > /dev/null
      echo "> wireguard systemd service enabled and started";echo
   fi
 break
