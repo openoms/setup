@@ -1,7 +1,5 @@
-# USAGE:
-#   $ wget https://github.com/blckbx/setup/blob/main/setup.sh
-#   $ chmod +x setup.sh
-#   $ sudo ./setup.sh
+# This script setup the environment needed for VPN usage on lightning network nodes
+# Use with care
 
 ## collect and set some environment vars
 lndConf="null"
