@@ -42,6 +42,7 @@ else
     echo "Type and enter path to lnd.conf and press Enter:"
     read lndConf
     if [ -f $lndConf ]; then
+        echo "> file found"
         setup="custom"
         echo "> Setup: custom"
         echo "> LNDDir: $lndConf";echo
@@ -51,7 +52,7 @@ else
     fi
 fi
 
-echo
+echo "Checking and installing requirements...";echo
 
 # check cgroup-tools
 echo "Checking cgroup-tools..."
@@ -71,7 +72,6 @@ echo "Checking nftables installation..."
 checknft=$(sudo nft -v | grep -c nftables)
 if [ $checknft -eq 0 ]; then
     echo "Installing nftables...";echo
-    sleep 5
     sudo apt install -y nftables > /dev/null;echo
     echo "> nftables installed";echo
 else
@@ -85,26 +85,22 @@ echo "Checking wireguard installation..."
 checkwg=$(sudo wg -v | grep -c wireguard-tools)
 if [ ! -f /etc/wireguard ] && [ $checkwg -eq 0 ];then
     echo "Installing wireguard...";echo
-    sleep 5
     sudo apt install -y wireguard > /dev/null;echo
     echo "> wireguard installed";echo
 else
     echo "> wireguard found";echo
 fi
 
+echo "Checking WireGuard config file, setting up split-tunneling..."
 sleep 2
 
-# keep lnd default p2p port
-lndInternalPort="9735"
-
 # check for downloaded lndHybridMode.conf, exit if not available
-echo "Checking for wireguard config file...";echo
-# ger current directory
+# get current directory
 directory=$(dirname -- $(readlink -fn -- "$0"))
 if [ -f $directory/lndHybridMode.conf ];then
    echo "> lndHybridMode.conf found, proceeding... ";echo
    sudo cp $directory/lndHybridMode.conf /etc/wireguard/
-   echo "> lndHybridMode.conf moved to /etc/wireguard";echo
+   echo "> lndHybridMode.conf moved to /etc/wireguard/";echo
 else
    echo "> /opt/lndHybridMode.conf VPN config file not found. Please put your config file in the same directory as this script!";echo
    exit 1
@@ -157,8 +153,6 @@ fi
 #sleep 2
 
 # setup split-tunneling
-echo "Setting up split-tunneling..."
-
 # create file
 echo "#!/bin/sh
 set -e
@@ -232,7 +226,12 @@ fi
 sleep 2
 
 # setup LND
-echo "Setting up lnd.conf for hybrid mode..."
+echo "Applying changes in lnd.conf to enable hybrid mode..."
+
+# keep LND's default p2p port
+lndInternalPort="9735"
+vpnExternalIP=$(sudo grep "Endpoint" /etc/wireguard/lndHybridMode.conf | awk '{ print $3 }' | cut -d ":" -f1)
+vpnExternalPort=$(sudo grep "Endpoint" /etc/wireguard/lndHybridMode.conf | awk '{ print $3 }' | cut -d ":" -f2)
 
 # add to [Application Options], if not already present
 lineNumber=$(grep -n "\[Application Options\]" $lndConf | cut -d ":" -f1)
@@ -243,7 +242,7 @@ if [ "${lineNumber}" != "" ]; then
        sed -i "${lineNumber}ilisten=0.0.0.0:${lndInternalPort}" $lndConf
        echo "> listen parameter set"
     else
-       echo "> listen parameter already set"
+       echo "> listen parameter is already set"
     fi
 
     checkexternalip=$(grep -c "externalip=${vpnExternalIP}:${vpnExternalPort}" $lndConf)
@@ -251,7 +250,7 @@ if [ "${lineNumber}" != "" ]; then
        sed -i "${lineNumber}iexternalip=${vpnExternalIP}:${vpnExternalPort}" $lndConf
        echo "> externalip parameter set"
     else
-       echo "> externalip parameter already set"
+       echo "> externalip parameter is already set"
     fi
 fi
 
