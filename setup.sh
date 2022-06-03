@@ -97,12 +97,16 @@ sleep 2
 # keep lnd default p2p port
 lndInternalPort="9735"
 
-# TODO: check for downloaded lndHybridMode.conf, exit if not available
+# check for downloaded lndHybridMode.conf, exit if not available
 echo "Checking for wireguard config file...";echo
-if [ -f /etc/wireguard/lndHybridMode.conf ];then
-   echo "> /etc/wireguard/lndHybridMode.conf VPN config file found";echo
+# ger current directory
+directory=$(dirname -- $(readlink -fn -- "$0"))
+if [ -f $directory/lndHybridMode.conf ];then
+   echo "> lndHybridMode.conf found, proceeding... ";echo
+   sudo cp $directory/lndHybridMode.conf /etc/wireguard/
+   echo "> lndHybridMode.conf moved to /etc/wireguard";echo
 else
-   echo "> /etc/wireguard/lndHybridMode.conf VPN config file not found";echo
+   echo "> /opt/lndHybridMode.conf VPN config file not found. Please put your config file in the same directory as this script!";echo
    exit 1
 fi
 
@@ -149,13 +153,6 @@ fi
 #AllowedIPs = 0.0.0.0/0
 #PersistentKeepalive = 25" > /etc/wireguard/lndHybridMode.conf
 
-
-#if [ -f /etc/wireguard/lndHybridMode.conf ];then
-#   echo "> /etc/wireguard/lndHybridMode.conf VPN config written";echo
-#else
-#   echo "> Writing VPN config file failed";echo
-#   exit 1
-#fi
 
 #sleep 2
 
