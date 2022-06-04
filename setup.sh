@@ -2,6 +2,8 @@
 # Use with care
 
 ## collect and set some environment vars
+echo "Checking setup..."
+
 lndConf="null"
 setup="null"
 host=$(hostname)
@@ -9,46 +11,38 @@ host=$(hostname)
 if [ "$host" = "myNode" ] || [ -f /mnt/hdd/mynode/lnd/lnd.conf ]
 then
     lndConf="/mnt/hdd/mynode/lnd/lnd.conf"
-    setup="mynode"
-    echo "> Setup: myNode"
-    echo "> LNDDir: $lndConf"
-#elif [ "$host" = "umbrel" ] || [ -f /home/umbrel/umbrel/lnd/lnd.conf ]
-#then
-#    lndConf="/home/umbrel/umbrel/lnd/lnd.conf"
-#    setup="umbrel"
-#    echo "> Setup: Umbrel"
-#    echo "> LNDDir: $lndConf"
+    setup="myNode"
+elif [ "$host" = "umbrel" ] || [ -f /home/umbrel/umbrel/lnd/lnd.conf ]
+then
+    lndConf="/home/umbrel/umbrel/lnd/lnd.conf"
+    setup="Umbrel"
 elif [ "$host" = "raspiblitz" ] || [ -f /mnt/hdd/lnd/lnd.conf ]
 then
     lndConf="/mnt/hdd/lnd/lnd.conf"
-    setup="raspiblitz"
-    echo "> Setup: RaspiBlitz"
-    echo "> LNDDir: $lndConf"
+    setup="RaspiBlitz"
 elif [ -f /data/lnd/lnd.conf ]
 then
     lndConf="/data/lnd/lnd.conf"
-    setup="raspibolt"
-    echo "> Setup: RaspiBolt"
-    echo "> LNDDir: $lndConf"
+    setup="RaspiBolt"
 elif [ -f /embassy-data/package-data/volumes/lnd/data/main/lnd.conf ]
 then
     lndConf="/embassy-data/package-data/volumes/lnd/data/main/lnd.conf"
-    setup="start9"
-    echo "> Setup: Start9 / EmbassyOS"
-    echo "> LNDDir: $lndConf"
+    setup="Start9/EmbassyOS"
 else
     echo "Type and enter path to lnd.conf and press Enter:"
     read lndConf
     if [ -f $lndConf ]; then
         echo "> file found"
         setup="custom"
-        echo "> Setup: custom"
-        echo "> LNDDir: $lndConf";echo
     else
         echo "File not found. Please try again."
         exit 1
     fi
 fi
+echo "> Setup: $setup"
+echo "> LNDDir: $lndConf";echo
+
+sleep 2
 
 echo "Checking and installing requirements...";echo
 
@@ -104,51 +98,6 @@ else
    exit 1
 fi
 
-
-# get internal IP range
-#hostname=$(hostname -I | awk '{print $1}' | cut -d"." -f1-3)
-
-# static VPN settings for testing purpose; this needs to be set manually or fetched from VPN backend!
-## tests: add credentials here
-#myPrivKey=""
-#vpnPubKey=""
-#vpnInternalIP=""
-#wgPort=""
-#vpnExternalIP=""
-#vpnExternalPort=""
-
-#echo "[Interface]
-#Address = ${vpnInternalIP}/24
-#PrivateKey = ${myPrivKey}
-#PostUp = ping -c1 10.0.0.1
-#FwMark = 0xdeadbeef
-#Table = off
-##51833 is the port of the vpn server
-#PostUp = ip rule add not from all fwmark 0xdeadbeef table ${wgPort};ip rule add from all table main suppress_prefixlength 0
-#PostUp = ip route add default dev %i table ${wgPort};
-##nftables rules
-#PostUp = nft add table inet %i
-#PostUp = nft add chain inet %i raw '{type filter hook prerouting priority raw; policy accept;}'; nft add rule inet %i raw iifname != %i ip daddr 10.0.0.1 fib saddr type != local counter drop
-#PostUp = nft add chain inet %i prerouting '{type filter hook prerouting priority mangle; policy accept;}'; nft add rule inet %i prerouting meta mark set ct mark
-#PostUp = nft add chain inet %i mangle '{type route hook output priority mangle; policy accept;}'; nft add rule inet %i mangle meta cgroup 1118498 meta mark set 0xdeadbeef
-#PostUp = nft add chain inet %i nat'{type nat hook postrouting priority srcnat; policy accept;}'; nft add rule inet %i nat oif %i ct mark 0xdeadbeef drop;nft add rule inet %i nat oif != \"lo\" ct mark 0xdeadbeef masquerade
-#PostUp = nft add chain inet %i postroutingmangle'{type filter hook postrouting priority mangle; policy accept;}'; nft add rule inet %i postroutingmangle meta mark 0xdeadbeef ct mark set meta mark
-##Kill switch
-#PostUp = nft add chain inet %i output '{type filter hook output priority 1; policy accept;}';nft insert rule inet %i output  oifname != %i ip daddr != ${hostname}.0/24 mark != \$(wg show %i fwmark) fib daddr type != local counter reject
-#PostUp = nft insert rule inet %i output tcp sport 22 counter accept
-##Delete create Table
-#PostDown = nft delete table inet %i
-##Delete Route
-#PostDown= ip rule del from all table  main suppress_prefixlength 0; ip rule del not from all fwmark 0xdeadbeef table  ${wgPort}
-#[Peer]
-##VPN data
-#PublicKey = ${vpnPubKey}
-#Endpoint =  ${vpnExternalIP}:${wgPort}
-#AllowedIPs = 0.0.0.0/0
-#PersistentKeepalive = 25" > /etc/wireguard/lndHybridMode.conf
-
-
-#sleep 2
 
 # setup split-tunneling
 # create file
@@ -224,12 +173,13 @@ fi
 sleep 2
 
 # setup LND
-echo "Applying changes in lnd.conf to enable hybrid mode..."
+echo "Applying changes to lnd.conf: enabling hybrid mode..."
 
 # keep LND's default p2p port
 lndInternalPort="9735"
 vpnExternalIP=$(sudo grep "Endpoint" /etc/wireguard/lndHybridMode.conf | awk '{ print $3 }' | cut -d ":" -f1)
-vpnExternalPort=$(sudo grep "Endpoint" /etc/wireguard/lndHybridMode.conf | awk '{ print $3 }' | cut -d ":" -f2)
+# TODO: get VPN forwarded port
+vpnExternalPort=""
 
 # add to [Application Options], if not already present
 lineNumber=$(grep -n "\[Application Options\]" $lndConf | cut -d ":" -f1)
@@ -243,7 +193,6 @@ if [ "${lineNumber}" != "" ]; then
        echo "> listen parameter is already set"
     fi
 
-    #checkexternalip=$(grep -c "externalip=${vpnExternalIP}:${vpnExternalPort}" $lndConf)
     checkexternalip=$(grep -c "externalip=" $lndConf)
     if [ $checkexternalip -eq 0 ]; then
        # "externalip=" not found, insert
@@ -273,8 +222,8 @@ if [ $checkexternalhosts -gt 0 ]; then
 fi
 
 
-checkstreamisolation=$(grep -c "streamisolation" $lndConf)
-if [ $checkstreamisolation -eq 1 ];then
+checkstreamisolation=$(grep -c "tor.streamisolation" $lndConf)
+if [ $checkstreamisolation -gt 0 ];then
     sed -i 's/tor.streamisolation=true/tor.streamisolation=false/g' $lndConf
     echo "> tor.streamisolation switched to false"
 else
@@ -282,8 +231,8 @@ else
     echo "> tor.streamisolation set"
 fi
 
-checkskipproxy=$(grep -c "skip-proxy-for-clearnet-targets" $lndConf)
-if [ $checkskipproxy -eq 1 ];then
+checkskipproxy=$(grep -c "tor.skip-proxy-for-clearnet-targets" $lndConf)
+if [ $checkskipproxy -gt 0 ];then
     sed -i 's/tor.skip-proxy-for-clearnet-targets=false/tor.skip-proxy-for-clearnet-targets=true/g' $lndConf
     echo "> tor.skip-proxy-for-clearnet-targets switched to true"
 else
@@ -299,9 +248,9 @@ echo "Checking for firewalls and adjusting settings if applicable...";
 checkufw=$(ufw version | grep -c Canonical)
 if [ $checkufw -eq 1 ];then
    ufw disable
-   ufw allow $lndInternalPort
+   ufw allow $vpnExternalPort
    ufw --force enable
-   echo "> ufw detected. LND port rule added";echo
+   echo "> ufw detected. VPN port rule added";echo
 else
    echo "> ufw not detected";echo
 fi
