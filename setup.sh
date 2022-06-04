@@ -39,6 +39,13 @@ else
         exit 1
     fi
 fi
+
+#if [ $setup == "RaspiBlitz" || $setup == "Umbrel" ||
+#     $lndConf == "/home/umbrel/umbrel/lnd/lnd.conf" || $lndConf == "/mnt/hdd/lnd/lnd.conf"]; then
+#    echo "> Unsupported setup found. This script currently does not support $setup.";echo
+#    exit 1
+#fi
+
 echo "> Setup: $setup"
 echo "> LNDDir: $lndConf";echo
 
@@ -225,6 +232,7 @@ fi
 checkstreamisolation=$(grep -c "tor.streamisolation" $lndConf)
 if [ $checkstreamisolation -gt 0 ];then
     sed -i 's/tor.streamisolation=true/tor.streamisolation=false/g' $lndConf
+    sed -i 's/tor.streamisolation=1/tor.streamisolation=0/g' $lndConf
     echo "> tor.streamisolation switched to false"
 else
     echo "tor.streamisolation=false" | sudo tee -a $lndConf
@@ -234,6 +242,7 @@ fi
 checkskipproxy=$(grep -c "tor.skip-proxy-for-clearnet-targets" $lndConf)
 if [ $checkskipproxy -gt 0 ];then
     sed -i 's/tor.skip-proxy-for-clearnet-targets=false/tor.skip-proxy-for-clearnet-targets=true/g' $lndConf
+    sed -i 's/tor.skip-proxy-for-clearnet-targets=0/tor.skip-proxy-for-clearnet-targets=1/g' $lndConf
     echo "> tor.skip-proxy-for-clearnet-targets switched to true"
 else
     echo "tor.skip-proxy-for-clearnet-targets=true" | sudo tee -a $lndConf
