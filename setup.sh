@@ -41,7 +41,7 @@ else
 fi
 
 # if RaspiBlitz, remove safety check
-if [ $setup == "RaspiBlitz" || $lndConf == "/mnt/hdd/lnd/lnd.conf"]; then
+if [ $setup == "RaspiBlitz" ] || [ $lndConf == "/mnt/hdd/lnd/lnd.conf"]; then
     # rm /path/to/lnd.check.sh
     echo "> RaspiBlitz detected, safety check for lnd.conf removed";echo
     exit 1
