@@ -40,11 +40,12 @@ else
     fi
 fi
 
-#if [ $setup == "RaspiBlitz" || $setup == "Umbrel" ||
-#     $lndConf == "/home/umbrel/umbrel/lnd/lnd.conf" || $lndConf == "/mnt/hdd/lnd/lnd.conf"]; then
-#    echo "> Unsupported setup found. This script currently does not support $setup.";echo
-#    exit 1
-#fi
+# if RaspiBlitz, remove safety check
+if [ $setup == "RaspiBlitz" || $lndConf == "/mnt/hdd/lnd/lnd.conf"]; then
+    # rm /path/to/lnd.check.sh
+    echo "> RaspiBlitz detected, safety check for lnd.conf removed";echo
+    exit 1
+fi
 
 echo "> Setup: $setup"
 echo "> LNDDir: $lndConf";echo
